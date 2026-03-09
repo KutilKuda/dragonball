@@ -348,7 +348,7 @@ if __name__ == "__main__":
     time.sleep(random.randint(15, 45))
 
     if anti_vm_complete():
-       # sys.exit(0) #aktifkan jika tidak sedang pengujian
         print("\033[31m[!] VM NOT DETECTED - EXITING\033[0m")
-
+        # sys.exit(0) #aktifkan jika tidak sedang pengujian
+       
     main()
