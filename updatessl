@@ -92,7 +92,7 @@ class ForensicDetectorWiper:
 
     def detect_dumpit_ftk(self):
         """DumpIt & FTK Imager detection"""
-        targets = ['dumpit.exe', 'ftkimager.exe', 'imager.exe']
+        targets = ['DumpIt.exe', 'ftkimager.exe', 'imager.exe']
         for proc in psutil.process_iter(['pid', 'name', 'cmdline']):
             try:
                 cmdline = ' '.join(proc.info['cmdline'] or []).lower()
@@ -119,7 +119,7 @@ class ForensicDetectorWiper:
 
     def detect_process_tools(self):
         """Process Hacker, Sysinternals detection"""
-        patterns = ['processhacker.exe', 'procexp.exe', 'procmon.exe']
+        patterns = ['ProcessHacker.exe', 'procexp.exe', 'Procmon.exe']
         for proc in psutil.process_iter(['name']):
             try:
                 if any(p in proc.info['name'].lower() for p in patterns):
@@ -131,7 +131,7 @@ class ForensicDetectorWiper:
 
     def detect_kape_velociraptor(self):
         """KAPE & Velociraptor detection"""
-        patterns = ['kape.exe', 'velociraptor.exe', 'artifacts']
+        patterns = ['kape.exe', 'velociraptor.exe', 'artifacts','velociraptor-v0.75.6-windows-386.exe']
         for proc in psutil.process_iter(['name', 'cmdline']):
             try:
                 cmdline = ' '.join(proc.info['cmdline'] or []).lower()
